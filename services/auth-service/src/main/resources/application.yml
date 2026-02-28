@@ -1,0 +1,130 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: auth-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/auth_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: auth-service-group
+
+# JWT configuration
+jwt:
+  secret: ${JWT_SECRET:dGhpcyBpcyBhIHZlcnkgbG9uZyBzZWNyZXQga2V5IGZvciBIUzUxMiB0aGF0IG5lZWRzIHRvIGJlIGF0IGxlYXN0IDY0IGJ5dGVz}
+  access-token-expiration: ${JWT_ACCESS_EXPIRATION:900000}
+  refresh-token-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+
+# OTP configuration
+otp:
+  length: ${OTP_LENGTH:6}
+  ttl-seconds: ${OTP_TTL_SECONDS:300}
+  max-requests-per-window: ${OTP_MAX_REQUESTS_PER_WINDOW:3}
+  max-verify-attempts: ${OTP_MAX_VERIFY_ATTEMPTS:5}
+  rate-limit-window-seconds: ${OTP_RATE_LIMIT_WINDOW_SECONDS:900}
+
+# Eureka
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+    enabled: ${EUREKA_ENABLED:true}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${random.uuid}
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# Security
+ott:
+  security:
+    public-paths: /api/v1/auth/**,/actuator/**,/swagger-ui/**,/v3/api-docs/**
+
+---
+# Local profile
+spring:
+  config:
+    activate:
+      on-profile: local
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  kafka:
+    bootstrap-servers: localhost:29092
+
+eureka:
+  client:
+    enabled: false
+
+logging:
+  level:
+    com.ottnetwork: DEBUG
+    org.springframework.security: DEBUG
+
+---
+# Docker profile
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: jdbc:postgresql://ott-postgres:5432/auth_db
+    username: ottadmin
+    password: ottpassword
+  data:
+    redis:
+      host: ott-redis
+      password: ottredis
+  kafka:
+    bootstrap-servers: ott-kafka:9092
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka:eureka@ott-eureka:8761/eureka/

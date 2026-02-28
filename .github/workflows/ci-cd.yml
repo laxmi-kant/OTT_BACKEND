@@ -1,0 +1,156 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop, staging]
+  pull_request:
+    branches: [main, develop, staging]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Step 1: Detect what changed
+  # ──────────────────────────────────────────────
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      shared-libs-changed: ${{ steps.changes.outputs.shared-libs }}
+      auth-service-changed: ${{ steps.changes.outputs.auth-service }}
+      user-service-changed: ${{ steps.changes.outputs.user-service }}
+      services-matrix: ${{ steps.build-matrix.outputs.matrix }}
+      has-services: ${{ steps.build-matrix.outputs.has-services }}
+      environment: ${{ steps.set-env.outputs.environment }}
+      is-deploy: ${{ steps.set-env.outputs.is-deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared-libs:
+              - 'shared-libs/**'
+            auth-service:
+              - 'services/auth-service/**'
+            user-service:
+              - 'services/user-service/**'
+            # Add new services here:
+            # content-service:
+            #   - 'services/content-service/**'
+            # subscription-service:
+            #   - 'services/subscription-service/**'
+
+      - name: Build service matrix
+        id: build-matrix
+        run: |
+          SERVICES=()
+          SHARED_CHANGED="${{ steps.changes.outputs.shared-libs }}"
+
+          # When shared-libs change, ALL services must rebuild
+          if [ "${{ steps.changes.outputs.auth-service }}" == "true" ] || [ "$SHARED_CHANGED" == "true" ]; then
+            SERVICES+=("\"auth-service\"")
+          fi
+          if [ "${{ steps.changes.outputs.user-service }}" == "true" ] || [ "$SHARED_CHANGED" == "true" ]; then
+            SERVICES+=("\"user-service\"")
+          fi
+          # Add new services here:
+          # if [ "${{ steps.changes.outputs.content-service }}" == "true" ] || [ "$SHARED_CHANGED" == "true" ]; then
+          #   SERVICES+=("\"content-service\"")
+          # fi
+
+          if [ ${#SERVICES[@]} -eq 0 ]; then
+            echo "matrix={\"service\":[]}" >> $GITHUB_OUTPUT
+            echo "has-services=false" >> $GITHUB_OUTPUT
+          else
+            JOINED=$(IFS=,; echo "${SERVICES[*]}")
+            echo "matrix={\"service\":[$JOINED]}" >> $GITHUB_OUTPUT
+            echo "has-services=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine target environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "environment=none"  >> $GITHUB_OUTPUT
+            echo "is-deploy=false"   >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "environment=dev"     >> $GITHUB_OUTPUT
+            echo "is-deploy=true"      >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+            echo "is-deploy=true"      >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "environment=prod"    >> $GITHUB_OUTPUT
+            echo "is-deploy=true"      >> $GITHUB_OUTPUT
+          else
+            echo "environment=none"    >> $GITHUB_OUTPUT
+            echo "is-deploy=false"     >> $GITHUB_OUTPUT
+          fi
+
+  # ──────────────────────────────────────────────
+  # Step 2: Build shared libraries (if changed)
+  # ──────────────────────────────────────────────
+  build-shared-libs:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.shared-libs-changed == 'true'
+    uses: ./.github/workflows/build-shared-libs.yml
+    secrets: inherit
+
+  # ──────────────────────────────────────────────
+  # Step 3: Build and deploy each changed service
+  # ──────────────────────────────────────────────
+  build-and-deploy-services:
+    needs: [detect-changes, build-shared-libs]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.has-services == 'true' &&
+      (needs.build-shared-libs.result == 'success' || needs.build-shared-libs.result == 'skipped')
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.services-matrix) }}
+      fail-fast: false
+    uses: ./.github/workflows/build-and-deploy.yml
+    with:
+      service-name: ${{ matrix.service }}
+      environment: ${{ needs.detect-changes.outputs.environment }}
+      is-deploy: ${{ needs.detect-changes.outputs.is-deploy == 'true' }}
+    secrets: inherit
+
+  # ──────────────────────────────────────────────
+  # Step 4: Notification
+  # ──────────────────────────────────────────────
+  notify:
+    needs: [detect-changes, build-and-deploy-services]
+    if: always() && needs.detect-changes.outputs.has-services == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pipeline summary
+        run: |
+          echo "## CI/CD Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | \`${{ needs.detect-changes.outputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Result | \`${{ needs.build-and-deploy-services.result }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Slack notification
+        if: vars.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ vars.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "${{ needs.build-and-deploy-services.result == 'success' && ':white_check_mark:' || ':x:' }} OTT Pipeline *${{ needs.build-and-deploy-services.result }}* on `${{ github.ref_name }}`\nEnvironment: ${{ needs.detect-changes.outputs.environment }}\nTriggered by: ${{ github.actor }}"
+            }

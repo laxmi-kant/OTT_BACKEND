@@ -1,0 +1,122 @@
+name: Rollback Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      service-name:
+        description: 'Service to rollback'
+        required: true
+        type: choice
+        options:
+          - auth-service
+          - user-service
+          # Add new services here as they are created
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      revision:
+        description: 'Revision number (leave empty for previous)'
+        required: false
+        type: string
+      image-tag:
+        description: 'Specific image tag to deploy (overrides revision)'
+        required: false
+        type: string
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --name ${{ vars.EKS_CLUSTER_NAME }} \
+            --region ${{ env.AWS_REGION }}
+
+      - name: Show current state
+        run: |
+          echo "=== Current Deployment ==="
+          kubectl get deployment ${{ inputs.service-name }} -n ott-platform -o wide
+          echo ""
+          echo "=== Rollout History ==="
+          kubectl rollout history deployment/${{ inputs.service-name }} -n ott-platform
+          echo ""
+          echo "=== Current Pods ==="
+          kubectl get pods -n ott-platform -l app=${{ inputs.service-name }}
+
+      # Mode 1: Deploy a specific image tag
+      - name: Rollback to specific image tag
+        if: inputs.image-tag != ''
+        run: |
+          ECR_IMAGE="${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ inputs.service-name }}:${{ inputs.image-tag }}"
+          echo "Rolling back to image: $ECR_IMAGE"
+          kubectl set image deployment/${{ inputs.service-name }} \
+            ${{ inputs.service-name }}=$ECR_IMAGE \
+            -n ott-platform
+
+      # Mode 2: Rollback to a specific revision number
+      - name: Rollback to specific revision
+        if: inputs.image-tag == '' && inputs.revision != ''
+        run: |
+          echo "Rolling back to revision: ${{ inputs.revision }}"
+          kubectl rollout undo deployment/${{ inputs.service-name }} \
+            --to-revision=${{ inputs.revision }} \
+            -n ott-platform
+
+      # Mode 3: Rollback to previous revision (default)
+      - name: Rollback to previous revision
+        if: inputs.image-tag == '' && inputs.revision == ''
+        run: |
+          echo "Rolling back to previous revision"
+          kubectl rollout undo deployment/${{ inputs.service-name }} \
+            -n ott-platform
+
+      - name: Wait for rollback
+        run: |
+          kubectl rollout status deployment/${{ inputs.service-name }} \
+            -n ott-platform \
+            --timeout=300s
+
+      - name: Verify rollback
+        run: |
+          echo "=== Post-Rollback State ==="
+          kubectl get deployment ${{ inputs.service-name }} -n ott-platform -o wide
+          echo ""
+          kubectl get pods -n ott-platform -l app=${{ inputs.service-name }}
+
+      - name: Rollback summary
+        run: |
+          echo "## Rollback Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | \`${{ inputs.service-name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | \`${{ inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.image-tag }}" ]; then
+            echo "| Mode | Image tag: \`${{ inputs.image-tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          elif [ -n "${{ inputs.revision }}" ]; then
+            echo "| Mode | Revision: \`${{ inputs.revision }}\` |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Mode | Previous revision |" >> $GITHUB_STEP_SUMMARY
+          fi

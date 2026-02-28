@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: ott-platform
+data:
+  db-host: "${DB_HOST}"
+  redis-host: "${REDIS_HOST}"
+  kafka-bootstrap-servers: "${KAFKA_BOOTSTRAP_SERVERS}"
+  eureka-host: "${EUREKA_HOST}"

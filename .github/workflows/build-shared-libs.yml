@@ -1,0 +1,38 @@
+name: Build Shared Libraries
+
+on:
+  workflow_call:
+
+jobs:
+  build-libs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      # Build in dependency order:
+      # 1. ott-common (no internal deps)
+      # 2. ott-security (depends on ott-common)
+      # 3. ott-kafka (depends on ott-common)
+      - name: Build ott-common
+        run: mvn -f shared-libs/ott-common/pom.xml clean install -DskipTests -B
+
+      - name: Build ott-security
+        run: mvn -f shared-libs/ott-security/pom.xml clean install -DskipTests -B
+
+      - name: Build ott-kafka
+        run: mvn -f shared-libs/ott-kafka/pom.xml clean install -DskipTests -B
+
+      - name: Upload shared libs to artifact cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-libs-m2
+          path: ~/.m2/repository/com/ottnetwork/
+          retention-days: 1
+          if-no-files-found: error

@@ -1,0 +1,44 @@
+# Build output
+**/target/
+*.jar
+*.war
+*.class
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Environment / Secrets
+.env
+*.env
+*.pem
+*.key
+
+# Docker volumes
+docker-data/
+
+# Node (if any tooling)
+node_modules/
+
+# Claude Code
+.claude/
