@@ -7,4 +7,3 @@ data:
   db-host: "${DB_HOST}"
   redis-host: "${REDIS_HOST}"
   kafka-bootstrap-servers: "${KAFKA_BOOTSTRAP_SERVERS}"
-  eureka-host: "${EUREKA_HOST}"
