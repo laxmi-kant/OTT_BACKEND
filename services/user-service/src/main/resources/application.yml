@@ -111,6 +111,10 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+  data:
+    redis:
+      ssl:
+        enabled: true
 
 logging:
   level:
