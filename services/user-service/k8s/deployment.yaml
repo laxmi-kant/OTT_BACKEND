@@ -32,7 +32,7 @@ spec:
             - containerPort: 8081
           env:
             - name: SPRING_PROFILES_ACTIVE
-              value: "docker"
+              value: "cloud"
             - name: DB_HOST
               valueFrom:
                 configMapKeyRef:
@@ -68,11 +68,6 @@ spec:
                 secretKeyRef:
                   name: user-service-secrets
                   key: jwt-secret
-            - name: EUREKA_HOST
-              valueFrom:
-                configMapKeyRef:
-                  name: user-service-config
-                  key: eureka-host
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness

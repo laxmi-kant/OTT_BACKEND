@@ -137,24 +137,44 @@ jobs:
         run: |
           kubectl create namespace ott-platform --dry-run=client -o yaml | kubectl apply -f -
 
-      # Apply ConfigMap with environment-specific values
+      # Fetch all credentials from AWS Secrets Manager
+      - name: Fetch secrets from AWS Secrets Manager
+        id: secrets
+        run: |
+          SECRET_JSON=$(aws secretsmanager get-secret-value \
+            --secret-id "ott-platform/${{ inputs.environment }}/credentials" \
+            --region ${{ env.AWS_REGION }} \
+            --query 'SecretString' --output text)
+
+          echo "::add-mask::$(echo $SECRET_JSON | jq -r '.DB_PASSWORD')"
+          echo "::add-mask::$(echo $SECRET_JSON | jq -r '.JWT_SECRET')"
+          echo "::add-mask::$(echo $SECRET_JSON | jq -r '.REDIS_PASSWORD')"
+
+          echo "DB_HOST=$(echo $SECRET_JSON | jq -r '.DB_HOST')" >> $GITHUB_OUTPUT
+          echo "DB_USERNAME=$(echo $SECRET_JSON | jq -r '.DB_USERNAME')" >> $GITHUB_OUTPUT
+          echo "DB_PASSWORD=$(echo $SECRET_JSON | jq -r '.DB_PASSWORD')" >> $GITHUB_OUTPUT
+          echo "REDIS_HOST=$(echo $SECRET_JSON | jq -r '.REDIS_HOST')" >> $GITHUB_OUTPUT
+          echo "REDIS_PASSWORD=$(echo $SECRET_JSON | jq -r '.REDIS_PASSWORD')" >> $GITHUB_OUTPUT
+          echo "KAFKA_BOOTSTRAP_SERVERS=$(echo $SECRET_JSON | jq -r '.KAFKA_BOOTSTRAP_SERVERS')" >> $GITHUB_OUTPUT
+          echo "JWT_SECRET=$(echo $SECRET_JSON | jq -r '.JWT_SECRET')" >> $GITHUB_OUTPUT
+
+      # Apply ConfigMap (non-sensitive infra endpoints)
       - name: Apply ConfigMap
         run: |
-          export DB_HOST="${{ vars.DB_HOST }}"
-          export REDIS_HOST="${{ vars.REDIS_HOST }}"
-          export KAFKA_BOOTSTRAP_SERVERS="${{ vars.KAFKA_BOOTSTRAP_SERVERS }}"
-          export EUREKA_HOST="${{ vars.EUREKA_HOST }}"
+          export DB_HOST="${{ steps.secrets.outputs.DB_HOST }}"
+          export REDIS_HOST="${{ steps.secrets.outputs.REDIS_HOST }}"
+          export KAFKA_BOOTSTRAP_SERVERS="${{ steps.secrets.outputs.KAFKA_BOOTSTRAP_SERVERS }}"
           envsubst < services/${{ inputs.service-name }}/k8s/configmap.yaml | kubectl apply -f -
 
-      # Apply Secrets from GitHub Secrets (never committed to repo)
+      # Apply Secrets (sensitive credentials from Secrets Manager)
       - name: Apply Secrets
         run: |
           kubectl create secret generic ${{ inputs.service-name }}-secrets \
             --namespace=ott-platform \
-            --from-literal=db-username="${{ secrets.DB_USERNAME }}" \
-            --from-literal=db-password="${{ secrets.DB_PASSWORD }}" \
-            --from-literal=redis-password="${{ secrets.REDIS_PASSWORD }}" \
-            --from-literal=jwt-secret="${{ secrets.JWT_SECRET }}" \
+            --from-literal=db-username="${{ steps.secrets.outputs.DB_USERNAME }}" \
+            --from-literal=db-password="${{ steps.secrets.outputs.DB_PASSWORD }}" \
+            --from-literal=redis-password="${{ steps.secrets.outputs.REDIS_PASSWORD }}" \
+            --from-literal=jwt-secret="${{ steps.secrets.outputs.JWT_SECRET }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       # Apply Deployment with image tag and AWS account substitution

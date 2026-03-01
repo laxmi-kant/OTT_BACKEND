@@ -55,16 +55,6 @@ otp:
   max-verify-attempts: ${OTP_MAX_VERIFY_ATTEMPTS:5}
   rate-limit-window-seconds: ${OTP_RATE_LIMIT_WINDOW_SECONDS:900}
 
-# Eureka
-eureka:
-  client:
-    service-url:
-      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
-    enabled: ${EUREKA_ENABLED:true}
-  instance:
-    prefer-ip-address: true
-    instance-id: ${spring.application.name}:${random.uuid}
-
 # Actuator
 management:
   endpoints:
@@ -98,17 +88,13 @@ spring:
   kafka:
     bootstrap-servers: localhost:29092
 
-eureka:
-  client:
-    enabled: false
-
 logging:
   level:
     com.ottnetwork: DEBUG
     org.springframework.security: DEBUG
 
 ---
-# Docker profile
+# Docker profile (local docker-compose)
 spring:
   config:
     activate:
@@ -124,7 +110,18 @@ spring:
   kafka:
     bootstrap-servers: ott-kafka:9092
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://eureka:eureka@ott-eureka:8761/eureka/
+---
+# Cloud profile (AWS EKS - all config via env vars)
+spring:
+  config:
+    activate:
+      on-profile: cloud
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+logging:
+  level:
+    com.ottnetwork: INFO
+    org.springframework: WARN
