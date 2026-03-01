@@ -1,9 +1,15 @@
 # Auth Service - API Documentation
 
-**Base URL:** `http://<host>:8082`
+**Staging Base URL:** `http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082`
 **API Version:** v1
 **Content-Type:** `application/json`
 **Authentication:** All auth endpoints are **public** (no JWT required). The auth service issues JWT tokens.
+
+> **Environment URLs:**
+> | Environment | Base URL |
+> |-------------|----------|
+> | Staging | `http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082` |
+> | Production | TBD (behind AWS API Gateway) |
 
 ---
 
@@ -189,7 +195,7 @@ Registers a new user and sends a 6-digit OTP to the provided email for verificat
 | phone | String | No | - | Phone number (optional, for SMS OTP) |
 
 ```bash
-curl -X POST http://<host>:8082/api/v1/auth/register \
+curl -X POST http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/api/v1/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "newuser@example.com",
@@ -264,7 +270,7 @@ Sends a 6-digit OTP to the registered email for login verification.
 | email | String | **Yes** | Not blank | Registered email address |
 
 ```bash
-curl -X POST http://<host>:8082/api/v1/auth/login \
+curl -X POST http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/api/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@ottnetwork.com"
@@ -334,7 +340,7 @@ Validates the OTP and issues JWT access and refresh tokens upon successful verif
 | otp | String | **Yes** | Exactly 6 digits | The 6-digit OTP received via email/SMS |
 
 ```bash
-curl -X POST http://<host>:8082/api/v1/auth/verify-otp \
+curl -X POST http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/api/v1/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@ottnetwork.com",
@@ -440,7 +446,7 @@ Generates and sends a new OTP to the specified email. The previous OTP is invali
 | purpose | String | **Yes** | `REGISTER` or `LOGIN` | Purpose of the OTP |
 
 ```bash
-curl -X POST http://<host>:8082/api/v1/auth/resend-otp \
+curl -X POST http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/api/v1/auth/resend-otp \
   -H "Content-Type: application/json" \
   -d '{
     "email": "admin@ottnetwork.com",
@@ -503,7 +509,7 @@ Issues a new access token and refresh token pair using a valid refresh token. Th
 | refreshToken | String | **Yes** | Not blank | Valid, non-revoked refresh token |
 
 ```bash
-curl -X POST http://<host>:8082/api/v1/auth/refresh \
+curl -X POST http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/api/v1/auth/refresh \
   -H "Content-Type: application/json" \
   -d '{
     "refreshToken": "eyJhbGciOiJIUzUxMiJ9..."
@@ -582,7 +588,7 @@ Authorization: Bearer <accessToken>
 ```
 
 ```bash
-curl -X POST http://<host>:8082/api/v1/auth/logout \
+curl -X POST http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/api/v1/auth/logout \
   -H "Authorization: Bearer eyJhbGciOiJIUzUxMiJ9..."
 ```
 
@@ -867,8 +873,8 @@ CREATE TABLE oauth_providers (
 ## Swagger / OpenAPI
 
 Interactive API documentation is available at:
-- **Swagger UI:** `http://<host>:8082/swagger-ui.html`
-- **OpenAPI JSON:** `http://<host>:8082/v3/api-docs`
+- **Swagger UI:** `http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/swagger-ui.html`
+- **OpenAPI JSON:** `http://a822255142ee3453d9d3f5b5f5c93c55-1473685919.ap-south-1.elb.amazonaws.com:8082/v3/api-docs`
 
 ---
 

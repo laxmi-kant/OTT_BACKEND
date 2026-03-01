@@ -1,9 +1,15 @@
 # User Service - API Documentation
 
-**Base URL:** `http://<host>:8081`
+**Staging Base URL:** `http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081`
 **API Version:** v1
 **Content-Type:** `application/json`
 **Authentication:** Bearer JWT Token (required for all endpoints except public paths)
+
+> **Environment URLs:**
+> | Environment | Base URL |
+> |-------------|----------|
+> | Staging | `http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081` |
+> | Production | TBD (behind AWS API Gateway) |
 
 ---
 
@@ -145,7 +151,7 @@ Retrieves the authenticated user's full profile.
 
 **Request:**
 ```bash
-curl -X GET http://<host>:8081/api/v1/users/me \
+curl -X GET http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -232,7 +238,7 @@ Updates the authenticated user's profile information.
 > **Note:** All fields are optional. Only provided fields will be updated. Omitted fields remain unchanged.
 
 ```bash
-curl -X PUT http://<host>:8081/api/v1/users/me \
+curl -X PUT http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -286,7 +292,7 @@ Retrieves a user's details by their database UUID.
 | userId | UUID | The user's database ID (not authUserId) |
 
 ```bash
-curl -X GET http://<host>:8081/api/v1/users/43fddf6f-a57f-4c8a-8c98-bbe71008e271 \
+curl -X GET http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/43fddf6f-a57f-4c8a-8c98-bbe71008e271 \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -341,7 +347,7 @@ Lists all active users with pagination. **Admin-only endpoint.**
 | sort | String | - | Sort field and direction (e.g., `createdAt,desc`) |
 
 ```bash
-curl -X GET "http://<host>:8081/api/v1/users?page=0&size=5" \
+curl -X GET "http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users?page=0&size=5" \
   -H "Authorization: Bearer <admin_token>"
 ```
 
@@ -416,7 +422,7 @@ Soft-deletes the authenticated user's account by marking it as inactive.
 **Role:** Any authenticated user
 
 ```bash
-curl -X DELETE http://<host>:8081/api/v1/users/me \
+curl -X DELETE http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -446,7 +452,7 @@ Retrieves all profiles belonging to the authenticated user.
 **Role:** Any authenticated user
 
 ```bash
-curl -X GET http://<host>:8081/api/v1/users/me/profiles \
+curl -X GET http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/profiles \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -526,7 +532,7 @@ Creates a new profile for the authenticated user.
 | profileImageUrl | String | No | max 512 chars | Profile image URL |
 
 ```bash
-curl -X POST http://<host>:8081/api/v1/users/me/profiles \
+curl -X POST http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/profiles \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -584,7 +590,7 @@ Updates an existing profile.
 **Request Fields:** Same as [Create Profile](#7-create-profile). All fields are optional — only provided fields are updated.
 
 ```bash
-curl -X PUT http://<host>:8081/api/v1/users/me/profiles/562252d7-830a-4c51-96b2-62ada57f9ba4 \
+curl -X PUT http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/profiles/562252d7-830a-4c51-96b2-62ada57f9ba4 \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -635,7 +641,7 @@ Removes a profile.
 | profileId | UUID | The profile's database ID |
 
 ```bash
-curl -X DELETE http://<host>:8081/api/v1/users/me/profiles/562252d7-830a-4c51-96b2-62ada57f9ba4 \
+curl -X DELETE http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/profiles/562252d7-830a-4c51-96b2-62ada57f9ba4 \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -663,7 +669,7 @@ Retrieves the authenticated user's preferences.
 **Role:** Any authenticated user
 
 ```bash
-curl -X GET http://<host>:8081/api/v1/users/me/preferences \
+curl -X GET http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/preferences \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -751,7 +757,7 @@ Creates or updates the authenticated user's preferences.
 | maturityRating | String | No | max 10 chars | Maturity rating: ALL, PG, PG13, R, NC17 |
 
 ```bash
-curl -X PUT http://<host>:8081/api/v1/users/me/preferences \
+curl -X PUT http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/preferences \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -804,7 +810,7 @@ Retrieves all devices registered to the authenticated user.
 **Role:** Any authenticated user
 
 ```bash
-curl -X GET http://<host>:8081/api/v1/users/me/devices \
+curl -X GET http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/devices \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -882,7 +888,7 @@ Registers a new device for the authenticated user.
 | pushToken | String | No | max 512 chars | FCM or APNs push notification token |
 
 ```bash
-curl -X POST http://<host>:8081/api/v1/users/me/devices \
+curl -X POST http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/devices \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -942,7 +948,7 @@ Unregisters a device from the authenticated user's account.
 | deviceId | String | The client-provided device identifier (NOT the database UUID) |
 
 ```bash
-curl -X DELETE http://<host>:8081/api/v1/users/me/devices/IPHONE15-ABC123-DEF456 \
+curl -X DELETE http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/api/v1/users/me/devices/IPHONE15-ABC123-DEF456 \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -988,8 +994,8 @@ The user-service publishes the following events to Kafka:
 ## Swagger / OpenAPI
 
 Interactive API documentation is available at:
-- **Swagger UI:** `http://<host>:8081/swagger-ui.html`
-- **OpenAPI JSON:** `http://<host>:8081/v3/api-docs`
+- **Swagger UI:** `http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/swagger-ui.html`
+- **OpenAPI JSON:** `http://a09ca676fa2c248d5b1aa20450de331c-682520952.ap-south-1.elb.amazonaws.com:8081/v3/api-docs`
 
 ---
 
